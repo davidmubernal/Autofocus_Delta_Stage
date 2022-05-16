@@ -43,8 +43,8 @@ entity proc_serie is
 end proc_serie;
 architecture behav of proc_serie is
     --Defino maquina de estados:
-    type estados_micro is (inicio, i_captura, i_manda, home, ajuste, autoenfoque, maximo, final, reset_ram, move_filter );
-    --Se?ales de los procesos
+    type estados_micro is (inicio, i_captura, i_manda, home, ajuste, autoenfoque, maximo, final, reset_ram, move_filter);
+    --Seniales de los procesos
     signal estado_actual, estado_siguiente: estados_micro;
     
     signal uart_data_aux : std_logic_vector(8-1 downto 0);
@@ -112,15 +112,14 @@ architecture behav of proc_serie is
     signal s_fin_c_maximo : std_logic;
 	 
 	 signal ta: unsigned(8 downto 0); --puedo contar hasta 513 (siendo el mínimo 1 microseg, 500*10ns=5microseg)
-    signal cuenta_step: unsigned(8 downto 0); 
-    signal i_move_filter : std_logic;
+    signal cuenta_step: unsigned(8 downto 0);
     
 begin
 
 
-P_cambio_estado: Process (estado_actual, dat_ready, uart_data, fin_manda_img, s_e_ajuste, instruccion, s_fin_cont_af, s_fin_c_maximo, ram_reseteada)
+P_cambio_estado: Process (estado_actual, dat_ready, uart_data, fin_manda_img, s_e_ajuste, instruccion, s_fin_cont_af, s_fin_c_maximo, ram_reseteada, i_motor_filter_ended)
 begin         
-   estado_siguiente <= inicio; 
+   estado_siguiente <= estado_actual; 
     case estado_actual is 
    -- porque va un ciclo de reloj por detras la instruccion
         when inicio => 
@@ -131,6 +130,8 @@ begin
                    estado_siguiente <= i_captura;     
                 elsif uart_data="00000011" then   
                    estado_siguiente <= home;
+					 elsif instruccion(7 downto 6)="01" then 
+						 estado_siguiente <= move_filter ;
                 else 
                     estado_siguiente <= inicio;
                 end if; 
@@ -200,6 +201,13 @@ begin
                 estado_siguiente <= reset_ram;
             end if;           
     -----------------------------------
+	     when move_filter  => 
+            if i_motor_filter_ended = '1' then 
+                estado_siguiente <= inicio;
+            else
+                estado_siguiente <= estado_actual;
+            end if;        
+	 -----------------------------------
 		when others =>
 			estado_siguiente <= inicio;
     end case;
@@ -240,7 +248,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '0';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------            
          when i_manda =>
             i_manda_img <= '1';
@@ -248,7 +255,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '0';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          -------------------------------             
          when i_captura=> 
             i_manda_img <= '0';
@@ -256,7 +262,6 @@ begin
             led_estado(1) <= '1';
             led_estado(2) <= '0';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------- 
          when home => 
             i_manda_img <= '0';
@@ -264,7 +269,6 @@ begin
             led_estado(1) <= '1';
             led_estado(2) <= '0';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------  
          when ajuste => 
             i_manda_img <= '0';
@@ -272,7 +276,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '1';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------  
          when autoenfoque => 
             i_manda_img <= '0';
@@ -280,7 +283,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '1';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------
          when maximo => 
             i_manda_img <= '0';
@@ -288,7 +290,6 @@ begin
             led_estado(1) <= '1';
             led_estado(2) <= '1';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------ 
          when final => 
             i_manda_img <= '1';
@@ -296,7 +297,6 @@ begin
             led_estado(1) <= '1';
             led_estado(2) <= '1';
             s_reset_ram   <= '0';
-				i_move_filter <= '0';
          ------------------------------ 
          when reset_ram => 
             i_manda_img <= '0';
@@ -304,7 +304,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '1';
             s_reset_ram   <= '1';
-				i_move_filter <= '0';
          ------------------------------    
 			when move_filter => 
             i_manda_img <= '0';
@@ -312,7 +311,6 @@ begin
             led_estado(1) <= '0';
             led_estado(2) <= '0';
             s_reset_ram   <= '0';
-				i_move_filter <= '1';
          ------------------------------    
         end case;
 end process;
@@ -336,7 +334,7 @@ proc_instruc: process(rst, estado_actual, uart_data, dat_ready, instruccion)
            pulso_sobel <= '0';
 			  i_motor_filter_activate <= '0';
 			  i_motor_filter_instruction <= "00";
-        elsif (estado_actual = inicio or estado_actual = ajuste) and dat_ready = '1' then
+        elsif (estado_actual = inicio or estado_actual = ajuste or estado_actual = move_filter) and dat_ready = '1' then
             case instruccion is
                when "10000000" => --direccion
                     pulso_m1  <= '0';
@@ -391,6 +389,15 @@ proc_instruc: process(rst, estado_actual, uart_data, dat_ready, instruccion)
                     pulso_a   <= '1';
                     pulso_sobel <= '0';
 						  i_motor_filter_activate <= '0';
+						  i_motor_filter_instruction <= "00";
+					 when "01000000" => --movimiento a filtro 0
+						  pulso_dir <= '0';
+                    pulso_m1  <= '0';
+                    pulso_m2  <= '0';
+                    pulso_m3  <= '0';
+                    pulso_a   <= '0';
+                    pulso_sobel <= '0';
+						  i_motor_filter_activate <= '1';
 						  i_motor_filter_instruction <= "00";
 					 when "01000001" => --movimiento a filtro 1
 						  pulso_dir <= '0';

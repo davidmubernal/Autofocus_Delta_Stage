@@ -37,9 +37,10 @@ entity m_posicionamiento_filtro is
 	 
 	instruction : in std_logic_vector(1 downto 0);
 	activate : in std_logic;
-	ended : out std_logic;
 	final_stop_left : in std_logic;
 	final_stop_right : in std_logic;
+	
+	ended : out std_logic;
 	motor_pulse : out std_logic;
 	motor_dir : out std_logic
 	);
@@ -48,132 +49,206 @@ end m_posicionamiento_filtro;
 
 architecture Behavioral of m_posicionamiento_filtro is
 
-	signal aux_activate : std_logic;
 	signal posicion : std_logic_vector(1 downto 0);
-	signal aux_posicion: std_logic_vector(1 downto 0);
 	signal actual_pos: std_logic_vector(1 downto 0);
 	
-	signal cuenta_motor : unsigned (4 downto 0);
-	signal ta : unsigned (4 downto 0);
-	signal dir : std_logic;
+	signal cuenta_motor : unsigned (7 downto 0);
+	signal ta : unsigned (7 downto 0);
+	signal dir_derecha : std_logic;
+	
+	signal cuenta: unsigned (17-1 downto 0);
+	constant fin_cuenta: natural := 100000;
+	signal pulse: std_logic;
+	signal aux_pulse: std_logic;
+	signal Inicializando : std_logic;
+	
 	
 begin
 
 -----------------------------------------------------------
 -- Maquina de estados para cambiar de posicion
-ME_posiciones : process(rst, clk)
+ME_posiciones : process(actual_pos, posicion,Inicializando)
 	begin
-		if rst='1' then
-			-- Ir a posicion incial
-			ta <= "00000";
-			dir <= '1';
-		elsif clk' event and clk='1' then
+	if Inicializando = '1' then
+		ta <= "11111111"; -- infinitos pasos hasta toparse
+		dir_derecha <= '0';
+	else
+		if actual_pos /= posicion then
 			case actual_pos is 
 				when "00" => -- Partir de posicion inicial
-					case instruction is
+					case posicion is
 						when "01" => -- Ir al primer filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "01010000"; -- 80 pasos
+							dir_derecha <= '0';
 						when "10" => -- Ir al segundo filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "10100000"; -- 160 pasos
+							dir_derecha <= '0';
 						when "11" => -- Ir al tercer filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "11110000"; -- 240 pasos
+							dir_derecha <= '0';
 						when others => -- Quieto
-							ta <= "00000";
-							dir <= '0';
+							ta <= "00000000";
+							dir_derecha <= '0';
 					end case;
 				when "01" => -- Partir del primer filtro
-					case instruction is
+					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "00000";
-							dir <= '1';
+							ta <= "01010000"; -- 80 pasos
+							dir_derecha <= '1';
 						when "10" => -- Ir al segundo filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "01010000"; -- 80 pasos 
+							dir_derecha <= '0';
 						when "11" => -- Ir al tercer filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "10100000"; -- 160 pasos
+							dir_derecha <= '0';
 						when others => -- Quieto
-							ta <= "00000";
-							dir <= '0';
+							ta <= "00000000";
+							dir_derecha <= '0';
 					end case;
 				when "10" => -- Partir del segundo filtro
-					case instruction is
+					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "00000";
-							dir <= '1';
+							ta <= "10100000"; -- 160 pasos
+							dir_derecha <= '1';
 						when "01" => -- Ir al primer filtro
-							ta <= "00000";
-							dir <= '1';
+							ta <= "01010000"; -- 80 pasos
+							dir_derecha <= '1';
 						when "11" => -- Ir al tercer filtro
-							ta <= "00000";
-							dir <= '0';
+							ta <= "01010000"; -- 80 pasos
+							dir_derecha <= '0';
 						when others => -- Quieto
-							ta <= "00000";
-							dir <= '0';
+							ta <= "00000000";
+							dir_derecha <= '0';
 					end case;
 				when "11" => -- Partir del tercer filtro
-					case instruction is
+					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "00000";
-							dir <= '1';
+							ta <= "11110000"; -- 240 pasos
+							dir_derecha <= '1';
 						when "01" => -- Ir al primer filtro
-							ta <= "00000";
-							dir <= '1';
+							ta <= "10100000"; -- 160 pasos
+							dir_derecha <= '1';
 						when "10" => -- Ir al segundo filtro
-							ta <= "00000";
-							dir <= '1';
+							ta <= "01010000"; -- 80 pasos
+							dir_derecha <= '1';
 						when others => -- Quieto
-							ta <= "00000";
-							dir <= '0';
+							ta <= "00000000";
+							dir_derecha <= '0';
 					end case;
 				when others => -- Volver a la posicion del filtro original
-					ta <= "00000";
-					dir <= '1';
+					ta <= "00000000";
+					dir_derecha <= '1';
 			end case;
+			end if;
 		end if;
 	end process;
+motor_dir <= dir_derecha;
 
 -----------------------------------------------------------
 -- Biestable para almacenar el filtro al que debe ir
 biest_posicion : process(rst, clk)
     begin
         if rst='1' then
-            aux_posicion <="00";
+            posicion <="00";
         elsif clk' event and clk='1' then
-				if activate = '1' then -- Llega nueva instruccion
-					aux_posicion <= instruction ;
-				else -- Nuevo ciclo sin instruccion
-					aux_posicion <= aux_posicion ;
+				if Inicializando = '0' then
+					if activate = '1' then -- Llega nueva instruccion
+						if actual_pos = posicion then
+							posicion <= instruction ;
+						end if;
+					else -- Nuevo ciclo sin instruccion
+						posicion <= posicion ;
+					end if;
 				end if;
-      end if;
+			end if;
     end process;  
- posicion <= aux_posicion;
+
+----------------------------------------------------------------
+-- Proceso de inicio del sistema de filtro
+Inicializar : process (clk, rst)
+ begin
+	if rst = '1' then
+		Inicializando <= '1';
+	elsif clk' event and clk='1' then
+		if final_stop_left = '1' then
+			Inicializando <= '0';
+		end if;
+	end if;
+end process;
+----------------------------------------------------------------
+-- Contador 1ms para activar pulso
+Contador : process (clk, rst)
+    begin 
+	  if rst = '1' then
+			cuenta <= (others => '0');
+			pulse <= '0';
+			aux_pulse <= '0';
+	  elsif clk' event and clk = '1' then
+		 aux_pulse <= pulse;
+		 if actual_pos /= posicion then
+			if cuenta = fin_cuenta-1 then
+				cuenta <= (others => '0');
+				if pulse = '1' then
+					pulse <= '0';
+				else
+					pulse <= '1';
+				end if;
+			else 
+				cuenta <= cuenta + 1;
+			end if;
+		 else
+			pulse <= '0';
+		 end if;
+	  end if;
+ end process;
+ 
+Proceso_pulso : process(clk, rst)
+	begin
+		if rst = '1' then
+			motor_pulse <= '0';
+		elsif clk' event and clk = '1' then
+			if pulse = '1' then
+				if (final_stop_left = '0' and dir_derecha = '0') or (final_stop_right = '0' and dir_derecha = '1') then
+					motor_pulse <= '1';
+				else
+					motor_pulse <= '0';
+				end if;
+			else
+				motor_pulse <= '0';
+			end if;
+		end if;
+	end process;
  
 -----------------------------------------------------------
 -- Proceso para mover el motor durante un tiempo ta
-Proceso_mover_filtro : process (clk, rst)
+Proceso_mover_filtro : process(clk, rst)
 	begin
-		if rst = '1' then 
-			-- Mover filtro a pos 0
-		elsif clk' event and clk = '1' then
-			-- Motor activo y finales de carrera desactivados
-			if aux_activate = '1' and final_stop_left = '0' and final_stop_right = '0' then 
-				-- Cuando me toca hacer un step
-			  if cuenta_motor = ta-1 then  -- llegar a la posicion
-				 cuenta_motor <= (others =>'0');
-				 actual_pos <= posicion;
-			  else
-				 cuenta_motor <= cuenta_motor + 1;
-			  end if;
-			else
-			  cuenta_motor <= (others =>'0');
-			end if;          
-      end if;
+	if rst = '1' then
+		cuenta_motor <= (others =>'0');
+		actual_pos <= "01";
+		ended <= '0';
+	elsif clk' event and clk = '1' then
+		ended <= '0';
+		if actual_pos = posicion then
+		  cuenta_motor <= (others =>'0');
+		elsif final_stop_left = '1' then
+		  actual_pos <= "00";
+	   elsif final_stop_right = '1' then
+		  actual_pos <= "11";
+		end if;
+		if pulse = '1' and aux_pulse = '0' then
+		 -- Motor activo y finales de carrera desactivados
+		 -- Cuando me toca hacer un step
+		  if cuenta_motor = ta-1 then  -- llegar a la posicion
+			 cuenta_motor <= (others =>'0');
+			 actual_pos <= posicion;
+			 ended <= '1';
+		  else
+			 cuenta_motor <= cuenta_motor + 1;
+		  end if;
+		end if;
+	 end if;
   end process;
-
 -----------------------------------------------------------
 
 end Behavioral;
