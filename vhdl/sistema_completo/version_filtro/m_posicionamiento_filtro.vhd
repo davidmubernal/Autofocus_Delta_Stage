@@ -57,10 +57,11 @@ architecture Behavioral of m_posicionamiento_filtro is
 	signal dir_derecha : std_logic;
 	
 	signal cuenta: unsigned (17-1 downto 0);
-	constant fin_cuenta: natural := 100000;
+	constant fin_cuenta: natural := 100000; -- 2000000;-- 20ms --100000 -- 1ms;
 	signal pulse: std_logic;
 	signal aux_pulse: std_logic;
 	signal Inicializando : std_logic;
+	signal aux_motor_pulse : std_logic;
 	
 	
 begin
@@ -79,13 +80,13 @@ ME_posiciones : process(actual_pos, posicion,Inicializando)
 					case posicion is
 						when "01" => -- Ir al primer filtro
 							ta <= "01010000"; -- 80 pasos
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when "10" => -- Ir al segundo filtro
 							ta <= "10100000"; -- 160 pasos
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when "11" => -- Ir al tercer filtro
 							ta <= "11110000"; -- 240 pasos
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when others => -- Quieto
 							ta <= "00000000";
 							dir_derecha <= '0';
@@ -94,13 +95,13 @@ ME_posiciones : process(actual_pos, posicion,Inicializando)
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
 							ta <= "01010000"; -- 80 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when "10" => -- Ir al segundo filtro
 							ta <= "01010000"; -- 80 pasos 
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when "11" => -- Ir al tercer filtro
 							ta <= "10100000"; -- 160 pasos
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when others => -- Quieto
 							ta <= "00000000";
 							dir_derecha <= '0';
@@ -109,13 +110,13 @@ ME_posiciones : process(actual_pos, posicion,Inicializando)
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
 							ta <= "10100000"; -- 160 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when "01" => -- Ir al primer filtro
 							ta <= "01010000"; -- 80 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when "11" => -- Ir al tercer filtro
 							ta <= "01010000"; -- 80 pasos
-							dir_derecha <= '0';
+							dir_derecha <= '1';
 						when others => -- Quieto
 							ta <= "00000000";
 							dir_derecha <= '0';
@@ -124,13 +125,13 @@ ME_posiciones : process(actual_pos, posicion,Inicializando)
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
 							ta <= "11110000"; -- 240 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when "01" => -- Ir al primer filtro
 							ta <= "10100000"; -- 160 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when "10" => -- Ir al segundo filtro
 							ta <= "01010000"; -- 80 pasos
-							dir_derecha <= '1';
+							dir_derecha <= '0';
 						when others => -- Quieto
 							ta <= "00000000";
 							dir_derecha <= '0';
@@ -184,41 +185,32 @@ Contador : process (clk, rst)
 			pulse <= '0';
 			aux_pulse <= '0';
 	  elsif clk' event and clk = '1' then
-		 aux_pulse <= pulse;
-		 if actual_pos /= posicion then
+	      aux_pulse <= pulse;
 			if cuenta = fin_cuenta-1 then
 				cuenta <= (others => '0');
-				if pulse = '1' then
-					pulse <= '0';
-				else
-					pulse <= '1';
-				end if;
+				pulse <= '1';
 			else 
 				cuenta <= cuenta + 1;
+				pulse <= '0';
 			end if;
-		 else
-			pulse <= '0';
-		 end if;
 	  end if;
  end process;
  
 Proceso_pulso : process(clk, rst)
 	begin
 		if rst = '1' then
-			motor_pulse <= '0';
+			aux_motor_pulse <= '0';
 		elsif clk' event and clk = '1' then
-			if pulse = '1' then
+			if pulse = '1' and actual_pos /= posicion then
 				if (final_stop_left = '0' and dir_derecha = '0') or (final_stop_right = '0' and dir_derecha = '1') then
-					motor_pulse <= '1';
-				else
-					motor_pulse <= '0';
+					aux_motor_pulse <= not aux_motor_pulse;
+				-- else
+					--aux_motor_pulse <= '0';
 				end if;
-			else
-				motor_pulse <= '0';
 			end if;
 		end if;
 	end process;
- 
+ motor_pulse <= aux_motor_pulse;
 -----------------------------------------------------------
 -- Proceso para mover el motor durante un tiempo ta
 Proceso_mover_filtro : process(clk, rst)

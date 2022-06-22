@@ -51,7 +51,7 @@ entity top_microscopio is
     ov7670_sioc : out std_logic;
     ov7670_siod : out std_logic;
     ov7670_rst_n : out std_logic;
-    ov7670_pwdn : out std_logic;
+    --ov7670_pwdn : out std_logic;
     ov7670_vsync : in std_logic;
     ov7670_href : in std_logic;
     ov7670_pclk : in std_logic;
@@ -222,7 +222,7 @@ m_top_ov7670 : entity work.top_ov7670
        ov7670_sioc => ov7670_sioc,
        ov7670_siod => ov7670_siod,
       ov7670_rst_n => ov7670_rst_n,
-       ov7670_pwdn => ov7670_pwdn,
+       --ov7670_pwdn => ov7670_pwdn,
       ov7670_vsync => ov7670_vsync,
        ov7670_href => ov7670_href,
        ov7670_pclk => ov7670_pclk,

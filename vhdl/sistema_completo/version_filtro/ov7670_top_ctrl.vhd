@@ -30,8 +30,8 @@ entity ov7670_top_ctrl is
     --sdat_in    : in  std_logic;                  --sccb serial data in
     sdat_out     : out std_logic;                  --sccb serial data ou
     ov7670_rst_n : out std_logic;                  --camera reset
-    ov7670_clk   : out std_logic;                  --camera system clock
-    ov7670_pwdn  : out std_logic                   --camera power down
+    ov7670_clk   : out std_logic                  --camera system clock
+    --ov7670_pwdn  : out std_logic                   --camera power down
   );
 end ov7670_top_ctrl;
 
@@ -68,8 +68,8 @@ architecture struct of ov7670_top_ctrl is
       addr       : out std_logic_vector(7 downto 0); --address to be written
       data_wr    : out std_logic_vector(7 downto 0); --data to write to slave
       ov7670_rst_n : out std_logic;                  --camera reset
-      ov7670_clk   : out std_logic;                  --camera system clock
-      ov7670_pwdn  : out std_logic                   --camera power down
+      ov7670_clk   : out std_logic                  --camera system clock
+      --ov7670_pwdn  : out std_logic                   --camera power down
     );
   end component;
 
@@ -113,8 +113,8 @@ begin
       addr         => addr,
       data_wr      => data_wr,
       ov7670_rst_n => ov7670_rst_n,
-      ov7670_clk   => ov7670_clk,
-      ov7670_pwdn  => ov7670_pwdn
+      ov7670_clk   => ov7670_clk
+      --ov7670_pwdn  => ov7670_pwdn
     );
 
 end struct;

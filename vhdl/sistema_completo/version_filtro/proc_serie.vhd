@@ -49,6 +49,7 @@ architecture behav of proc_serie is
     
     signal uart_data_aux : std_logic_vector(8-1 downto 0);
     signal instruccion   : std_logic_vector(8-1 downto 0);
+	 signal dat_ready_re : std_logic;
   
     signal i_dir_aux : std_logic;
     signal pulso_dir : std_logic;
@@ -117,18 +118,18 @@ architecture behav of proc_serie is
 begin
 
 
-P_cambio_estado: Process (estado_actual, dat_ready, uart_data, fin_manda_img, s_e_ajuste, instruccion, s_fin_cont_af, s_fin_c_maximo, ram_reseteada, i_motor_filter_ended)
+P_cambio_estado: Process (estado_actual, dat_ready_re, fin_manda_img, s_e_ajuste, instruccion, s_fin_cont_af, s_fin_c_maximo, ram_reseteada, i_motor_filter_ended)
 begin         
    estado_siguiente <= estado_actual; 
     case estado_actual is 
    -- porque va un ciclo de reloj por detras la instruccion
         when inicio => 
-            if dat_ready='1' then 
-                if uart_data="00000100" then           
+            if dat_ready_re='1' then 
+                if instruccion="00000100" then           
                    estado_siguiente <= i_manda;        
-                elsif uart_data="00000010" then   
+                elsif instruccion="00000010" then   
                    estado_siguiente <= i_captura;     
-                elsif uart_data="00000011" then   
+                elsif instruccion="00000011" then   
                    estado_siguiente <= home;
 					 elsif instruccion(7 downto 6)="01" then 
 						 estado_siguiente <= move_filter ;
@@ -226,11 +227,13 @@ lee_instrucciones: process(rst, clk)
  begin
   if rst = '1' then
      instruccion <= (others => '0');
+	  dat_ready_re  <= '0';
   elsif clk'event and clk='1' then
-  if dat_ready = '1' then
-    instruccion <= uart_data;
-  end if;
- end if;
+	  dat_ready_re  <= dat_ready;
+	  if dat_ready = '1' then
+		 instruccion <= uart_data;
+	  end if;
+	 end if;
 end process;
 
 P_comb_salidas: Process (estado_actual)
@@ -315,7 +318,7 @@ begin
         end case;
 end process;
 
-proc_instruc: process(rst, estado_actual, uart_data, dat_ready, instruccion)
+proc_instruc: process(rst, estado_actual, dat_ready_re, instruccion)
     begin
         pulso_dir <= '0';
         pulso_m1  <= '0';
@@ -334,7 +337,7 @@ proc_instruc: process(rst, estado_actual, uart_data, dat_ready, instruccion)
            pulso_sobel <= '0';
 			  i_motor_filter_activate <= '0';
 			  i_motor_filter_instruction <= "00";
-        elsif (estado_actual = inicio or estado_actual = ajuste or estado_actual = move_filter) and dat_ready = '1' then
+        elsif (estado_actual = inicio or estado_actual = ajuste or estado_actual = move_filter) and dat_ready_re = '1' then
             case instruccion is
                when "10000000" => --direccion
                     pulso_m1  <= '0';
@@ -440,12 +443,12 @@ proc_instruc: process(rst, estado_actual, uart_data, dat_ready, instruccion)
 end process;
 
 ------------------------------------------------------------------
-proc_autoenfoque: process(rst, estado_actual, uart_data, dat_ready, instruccion, pulso_autoenfoque)
+proc_autoenfoque: process(rst, estado_actual, dat_ready_re, instruccion, pulso_autoenfoque)
     begin
          pulso_autoenfoque <= '0';
         if rst='1' then
            pulso_autoenfoque <= '0';
-        elsif (estado_actual = autoenfoque) and dat_ready = '1' then
+        elsif (estado_actual = autoenfoque) and dat_ready_re = '1' then
             case instruccion is
                when "10000101" =>
                     pulso_autoenfoque  <= '1';

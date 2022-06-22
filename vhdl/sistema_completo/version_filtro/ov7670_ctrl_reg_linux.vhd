@@ -41,8 +41,8 @@ entity ov7670_ctrl_reg is
     addr       : out std_logic_vector(7 downto 0); --address to be written
     data_wr    : out std_logic_vector(7 downto 0); --data to write to slave
     ov7670_rst_n : out std_logic;                  --camera reset
-    ov7670_clk   : out std_logic;                  --camera system clock
-    ov7670_pwdn  : out std_logic                   --camera power down
+    ov7670_clk   : out std_logic                  --camera system clock
+    --ov7670_pwdn  : out std_logic                   --camera power down
   );
 end ov7670_ctrl_reg;
 
@@ -1028,7 +1028,7 @@ begin
   ov7670_clk <= cnt_cam_clk(1);
 
   -- camera reset and power down
-  ov7670_pwdn  <= '0';
+  --ov7670_pwdn  <= '0';
 
   -------- controlling the registers to be sent ------------
 

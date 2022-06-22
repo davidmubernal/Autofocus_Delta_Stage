@@ -43,7 +43,7 @@ entity top_ov7670 is
       ov7670_siod  : out   std_logic;
 
       ov7670_rst_n : out   std_logic;
-      ov7670_pwdn  : out   std_logic;
+      --ov7670_pwdn  : out   std_logic;
       ov7670_vsync : in    std_logic;
       ov7670_href  : in    std_logic;
       ov7670_pclk  : in    std_logic;
@@ -111,8 +111,8 @@ architecture struct of top_ov7670 is
       --sdat_in    : in  std_logic;        --sccb serial data in
       sdat_out     : out std_logic;        --sccb serial data out, 3-state
       ov7670_rst_n : out std_logic;        --camera reset
-      ov7670_clk   : out std_logic;        --camera system clock
-      ov7670_pwdn  : out std_logic         --camera power down
+      ov7670_clk   : out std_logic        --camera system clock
+      --ov7670_pwdn  : out std_logic         --camera power down
     );
   end component;
 
@@ -496,8 +496,8 @@ begin
       sdat_on       => sdat_on,
       sdat_out      => sdat_out,
       ov7670_rst_n  => ov7670_rst_n,
-      ov7670_clk    => ov7670_xclk,
-      ov7670_pwdn   => ov7670_pwdn
+      ov7670_clk    => ov7670_xclk
+      --ov7670_pwdn   => ov7670_pwdn
     );
 
   ov7670_siod <= sdat_out when sdat_on = '1' else 'Z';
