@@ -52,8 +52,8 @@ architecture Behavioral of m_posicionamiento_filtro is
 	signal posicion : std_logic_vector(1 downto 0);
 	signal actual_pos: std_logic_vector(1 downto 0);
 	
-	signal cuenta_motor : unsigned (7 downto 0);
-	signal ta : unsigned (7 downto 0);
+	signal cuenta_motor : unsigned (12 downto 0);
+	signal ta : unsigned (12 downto 0);
 	signal dir_derecha : std_logic;
 	
 	signal cuenta: unsigned (17-1 downto 0);
@@ -71,7 +71,7 @@ begin
 ME_posiciones : process(actual_pos, posicion,Inicializando)
 	begin
 	if Inicializando = '1' then
-		ta <= "11111111"; -- infinitos pasos hasta toparse
+		ta <= "1111111111111"; -- infinitos pasos hasta toparse
 		dir_derecha <= '0';
 	else
 		if actual_pos /= posicion then
@@ -79,65 +79,65 @@ ME_posiciones : process(actual_pos, posicion,Inicializando)
 				when "00" => -- Partir de posicion inicial
 					case posicion is
 						when "01" => -- Ir al primer filtro
-							ta <= "01010000"; -- 80 pasos
+							ta <= to_unsigned(2560,13); -- 1280 pasos
 							dir_derecha <= '1';
 						when "10" => -- Ir al segundo filtro
-							ta <= "10100000"; -- 160 pasos
+							ta <= to_unsigned(5120,13); -- 2560 pasos
 							dir_derecha <= '1';
 						when "11" => -- Ir al tercer filtro
-							ta <= "11110000"; -- 240 pasos
+							ta <= to_unsigned(7680,13); -- 3840 pasos
 							dir_derecha <= '1';
 						when others => -- Quieto
-							ta <= "00000000";
+							ta <= to_unsigned(0,13);
 							dir_derecha <= '0';
 					end case;
 				when "01" => -- Partir del primer filtro
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "01010000"; -- 80 pasos
+							ta <= to_unsigned(2560,13); -- 1280 pasos
 							dir_derecha <= '0';
 						when "10" => -- Ir al segundo filtro
-							ta <= "01010000"; -- 80 pasos 
+							ta <= to_unsigned(2560,13); -- 1280 pasos
 							dir_derecha <= '1';
 						when "11" => -- Ir al tercer filtro
-							ta <= "10100000"; -- 160 pasos
+							ta <= to_unsigned(5120,13);  -- 2560 pasos
 							dir_derecha <= '1';
 						when others => -- Quieto
-							ta <= "00000000";
+							ta <= to_unsigned(0,13); 
 							dir_derecha <= '0';
 					end case;
 				when "10" => -- Partir del segundo filtro
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "10100000"; -- 160 pasos
+							ta <= to_unsigned(5120,13);  -- 2560 pasos
 							dir_derecha <= '0';
 						when "01" => -- Ir al primer filtro
-							ta <= "01010000"; -- 80 pasos
+							ta <= to_unsigned(1280,13); -- 1280 pasos
 							dir_derecha <= '0';
 						when "11" => -- Ir al tercer filtro
-							ta <= "01010000"; -- 80 pasos
+							ta <= to_unsigned(2560,13);  -- 1280 pasos
 							dir_derecha <= '1';
 						when others => -- Quieto
-							ta <= "00000000";
+							ta <= to_unsigned(0,13); 
 							dir_derecha <= '0';
 					end case;
 				when "11" => -- Partir del tercer filtro
 					case posicion is
 						when "00" => -- Ir a la posicion inicial
-							ta <= "11110000"; -- 240 pasos
+							ta <= to_unsigned(7680,13);  -- 3840 pasos
 							dir_derecha <= '0';
 						when "01" => -- Ir al primer filtro
-							ta <= "10100000"; -- 160 pasos
+							ta <= to_unsigned(5120,13);  -- 2560 pasos
 							dir_derecha <= '0';
 						when "10" => -- Ir al segundo filtro
-							ta <= "01010000"; -- 80 pasos
+							ta <= to_unsigned(2560,13);  -- 1280 pasos
 							dir_derecha <= '0';
 						when others => -- Quieto
-							ta <= "00000000";
+							ta <= to_unsigned(0,13); 
 							dir_derecha <= '0';
 					end case;
 				when others => -- Volver a la posicion del filtro original
-					ta <= "00000000";
+					ta <= to_unsigned(0,13); 
 					dir_derecha <= '1';
 			end case;
 			end if;
@@ -223,12 +223,16 @@ Proceso_mover_filtro : process(clk, rst)
 		ended <= '0';
 		if actual_pos = posicion then
 		  cuenta_motor <= (others =>'0');
-		elsif final_stop_left = '1' then
+		  ended <= '1';
+		elsif final_stop_left = '1' and dir_derecha = '0' then
 		  actual_pos <= "00";
-	   elsif final_stop_right = '1' then
+		  cuenta_motor <= (others =>'0');
+		  ended <= '1';
+	   elsif final_stop_right = '1' and dir_derecha = '1' then
 		  actual_pos <= "11";
-		end if;
-		if pulse = '1' and aux_pulse = '0' then
+		  cuenta_motor <= (others =>'0');
+		  ended <= '1';
+		elsif pulse = '1' and aux_pulse = '0' then
 		 -- Motor activo y finales de carrera desactivados
 		 -- Cuando me toca hacer un step
 		  if cuenta_motor = ta-1 then  -- llegar a la posicion

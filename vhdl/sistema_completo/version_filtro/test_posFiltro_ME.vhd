@@ -193,48 +193,40 @@ BEGIN
 		rst <= '1';
       wait for 95 ns;	
 		rst <= '0';
-		wait for clk_period*5000000;
+		wait for clk_period*1000;
 		final_stop_left <='1';
 		wait for clk_period*100000;
-		wait for clk_period*5;
 		dat_ready <= '1';
-		uart_data <= "01000001";
+		uart_data <= "01000001"; --65
 		wait for clk_period;
 		dat_ready <= '0';
 		wait for clk_period*100;
 		final_stop_left <='0';
-		-- 200ms
-		--wait for clk_period*850000;
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		dat_ready <= '1';
-		uart_data <= "01000010";
-		wait for clk_period;
-		dat_ready <= '0';
+		--wait for clk_period*100000;
+		--dat_ready <= '1';
+		--uart_data <= "01000010"; --66
+		--wait for clk_period;
+		--dat_ready <= '0';
 		
 		--wait for clk_period*850000;
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		dat_ready <= '1';
-		uart_data <= "01000011";
-		wait for clk_period;
-		dat_ready <= '0';
+		--wait for clk_period*10000000;
+		--dat_ready <= '1';
+		--uart_data <= "01000011"; --67
+		--wait for clk_period;
+		--dat_ready <= '0';
 		
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		dat_ready <= '1';
-		uart_data <= "01000001";
-		wait for clk_period;
-		dat_ready <= '0';
+		--wait for clk_period*10000000;
+		--dat_ready <= '1';
+		--uart_data <= "01000000"; --64
+		--wait for clk_period;
+		--dat_ready <= '0';
 		
-		wait for clk_period*10000000;
-		wait for clk_period*10000000;
-		dat_ready <= '1';
-		uart_data <= "01000000";
-		wait for clk_period;
-		dat_ready <= '0';
+		--wait for clk_period*10000000;
+		--wait for clk_period*10000000;
+		--dat_ready <= '1';
+		--uart_data <= "01000000"; --64
+		--wait for clk_period;
+		--dat_ready <= '0';
 		
       wait;
    end process;
